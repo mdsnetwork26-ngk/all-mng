@@ -1,0 +1,2 @@
+# all-mng
+managemen olt
