@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ olt.name }}{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-1">{{ olt.name }}</h1>
+<p class="text-slate-400 mb-4">{{ olt.ip }} · SNMP {{ olt.snmp_community }}</p>
+
+<h2 class="text-xl font-bold mb-3">Riwayat Metrik (terbaru)</h2>
+<div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-6">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-700">
+      <tr><th class="p-2 text-left">Waktu</th><th class="p-2 text-left">Status</th><th class="p-2 text-left">CPU%</th><th class="p-2 text-left">Mem%</th><th class="p-2 text-left">Suhu°C</th><th class="p-2 text-left">Uptime</th></tr>
+    </thead>
+    <tbody>
+      {% for m in metrics %}
+      <tr class="border-t border-slate-700">
+        <td class="p-2">{{ m.ts.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td class="p-2"><span class="px-2 py-1 rounded text-xs {{ 'bg-green-600' if m.status=='online' else 'bg-red-600' }}">{{ m.status }}</span></td>
+        <td class="p-2">{{ m.cpu if m.cpu is not none else '-' }}</td>
+        <td class="p-2">{{ m.memory if m.memory is not none else '-' }}</td>
+        <td class="p-2">{{ m.temperature if m.temperature is not none else '-' }}</td>
+        <td class="p-2 text-xs">{{ m.uptime or '-' }}</td>
+      </tr>
+      {% endfor %}
+      {% if not metrics %}<tr><td colspan="6" class="p-4 text-center text-slate-400">Belum ada data</td></tr>{% endif %}
+    </tbody>
+  </table>
+</div>
+
+<p class="text-sm text-slate-400">API JSON: <code class="text-blue-300">/api/metrics/{{ olt.id }}</code> (untuk grafik eksternal/Grafana).</p>
+<a href="/olts/{{ olt.id }}/onus" class="bg-blue-600 hover:bg-blue-700 rounded px-3 py-2 text-sm font-semibold mr-3">Kelola ONU (SSH)</a>
+<a href="/" class="text-blue-400">← Kembali</a>
+{% endblock %}

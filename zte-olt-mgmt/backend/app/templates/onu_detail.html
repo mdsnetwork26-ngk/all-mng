@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}ONU {{ onu_id }}{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-1">{{ onu_id }}</h1>
+<p class="text-slate-400 mb-4">{{ olt.name }} ({{ olt.ip }})</p>
+
+{% if err %}
+<div class="bg-red-900/40 border border-red-700 rounded p-3 mb-4 text-sm">Error SSH: {{ err }}</div>
+{% endif %}
+
+<div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-6">
+  <h2 class="font-semibold mb-3">Detail Optik & Info</h2>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+    <div><div class="text-slate-400 text-sm">State</div><div class="font-bold text-lg">{{ detail.state if detail.state else '-' }}</div></div>
+    <div><div class="text-slate-400 text-sm">Rx Power</div><div class="font-bold text-lg {{ 'text-red-400' if detail.rx_power is not none and (detail.rx_power < -28 or detail.rx_power > -8) else 'text-green-400' }}">{{ detail.rx_power if detail.rx_power is not none else '-' }} dBm</div></div>
+    <div><div class="text-slate-400 text-sm">Tx Power</div><div class="font-bold text-lg">{{ detail.tx_power if detail.tx_power is not none else '-' }} dBm</div></div>
+    <div><div class="text-slate-400 text-sm">Serial</div><div class="font-bold text-sm">{{ detail.serial if detail.serial else '-' }}</div></div>
+  </div>
+  {% if detail.name %}<p class="mt-3 text-sm">Nama: <span class="text-blue-300">{{ detail.name }}</span></p>{% endif %}
+</div>
+
+<!-- Rename -->
+<div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-6">
+  <h2 class="font-semibold mb-3">Ubah Nama ONU</h2>
+  <form method="post" action="/olts/{{ olt.id }}/onus/{{ onu_id.split(':')[-1] }}/rename" class="flex gap-3">
+    <input type="hidden" name="pon" value="gpon-olt_{{ onu_id.split('_')[-1].split(':')[0] }}">
+    <input name="new_name" placeholder="Nama baru" required class="bg-slate-700 rounded px-3 py-2 text-sm flex-1">
+    <button class="bg-blue-600 hover:bg-blue-700 rounded px-4 py-2 text-sm font-semibold">Simpan</button>
+  </form>
+</div>
+
+<!-- Grafik Redaman -->
+<div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-6">
+  <h2 class="font-semibold mb-3">Grafik Redaman (Rx Power) — Historis</h2>
+  <canvas id="rxChart" height="120"></canvas>
+  <div class="mt-3 flex gap-2">
+    <button onclick="loadChart()" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1 text-sm">Refresh Grafik</button>
+    <button onclick="pollNow()" class="bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 text-sm">Poll ONU Sekarang</button>
+    <span id="pollStatus" class="text-sm text-slate-400 self-center"></span>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const oltId = {{ olt.id }};
+const onuIndex = "{{ onu_id.split(':')[-1] }}";
+let chart = null;
+async function loadChart() {
+  const r = await fetch(`/api/onu-metrics/${oltId}/${onuIndex}`);
+  const data = await r.json();
+  const labels = data.map(d => new Date(d.ts).toLocaleString());
+  const rx = data.map(d => d.rx);
+  const tx = data.map(d => d.tx);
+  const ctx = document.getElementById('rxChart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Rx (dBm)', data: rx, borderColor: '#3b82f6', tension: 0.3 },
+      { label: 'Tx (dBm)', data: tx, borderColor: '#22c55e', tension: 0.3 }
+    ]},
+    options: { responsive: true, scales: { y: { title: { display: true, text: 'dBm' } } } }
+  });
+}
+async function pollNow() {
+  const el = document.getElementById('pollStatus');
+  el.textContent = 'Polling...';
+  const r = await fetch(`/api/onu-poll/${oltId}?pon=gpon-olt_{{ onu_id.split('_')[-1].split(':')[0] }}`, { method: 'POST' });
+  const data = await r.json();
+  el.textContent = `Selesai: ${data.count} ONU`;
+  loadChart();
+}
+loadChart();
+</script>
+
+<details class="bg-slate-800 rounded-xl border border-slate-700 p-4">
+  <summary class="cursor-pointer text-sm text-slate-300">Raw output SSH (debug)</summary>
+  <pre class="mt-3 text-xs overflow-x-auto whitespace-pre-wrap text-slate-400">{{ raw }}</pre>
+</details>
+
+<a href="/olts/{{ olt.id }}/onus" class="text-blue-400 mt-4 inline-block">← Kembali ke daftar ONU</a>
+{% endblock %}

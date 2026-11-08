@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}OLTs{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Manajemen OLT</h1>
+
+<div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-6">
+  <h2 class="font-semibold mb-3">Tambah OLT Baru</h2>
+  <form method="post" action="/olts/add" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+    <input name="name" placeholder="Nama OLT" required class="bg-slate-700 rounded px-3 py-2 text-sm">
+    <input name="ip" placeholder="IP Address" required class="bg-slate-700 rounded px-3 py-2 text-sm">
+    <input name="community" placeholder="SNMP Community (default public)" class="bg-slate-700 rounded px-3 py-2 text-sm">
+    <input name="ssh_user" placeholder="SSH User" class="bg-slate-700 rounded px-3 py-2 text-sm">
+    <input name="ssh_password" type="password" placeholder="SSH Password" class="bg-slate-700 rounded px-3 py-2 text-sm">
+    <button class="md:col-span-5 bg-blue-600 hover:bg-blue-700 rounded px-4 py-2 text-sm font-semibold">Tambah</button>
+  </form>
+</div>
+
+<div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-700">
+      <tr><th class="p-2 text-left">Nama</th><th class="p-2 text-left">IP</th><th class="p-2 text-left">Community</th><th class="p-2 text-left">SSH User</th><th class="p-2"></th></tr>
+    </thead>
+    <tbody>
+      {% for o in olts %}
+      <tr class="border-t border-slate-700">
+        <td class="p-2"><a href="/olts/{{ o.id }}" class="text-blue-400 hover:underline">{{ o.name }}</a></td>
+        <td class="p-2">{{ o.ip }}</td>
+        <td class="p-2">{{ o.snmp_community }}</td>
+        <td class="p-2">{{ o.ssh_user or '-' }}</td>
+        <td class="p-2">
+          <form method="post" action="/olts/{{ o.id }}/delete" onsubmit="return confirm('Hapus OLT ini?')">
+            <button class="text-red-400 hover:underline">Hapus</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not olts %}<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada OLT</td></tr>{% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
